@@ -54,12 +54,13 @@ TARGET="${RBNX_BUILD_TARGET:-x86-docker}"
 # ROS distro the scene image is built against. Robonix does not bind to a
 # single ROS release: pick it here and the Dockerfile threads it through
 # the base image, the ros-<distro>-* apt packages, and the runtime
-# setup.bash. Supported: humble (default, verified), iron, jazzy, rolling.
+# setup.bash. Supported: jazzy (default; zenoh pair via vendor+security-tools
+# since noble has no zenoh-bridge-dds), humble (zenoh-bridge-dds available).
 # Set it before the first build, e.g.
-#   ROBONIX_SCENE_ROS_DISTRO=iron rbnx build -p system/scene
+#   ROBONIX_SCENE_ROS_DISTRO=humble rbnx build -p system/scene
 # (`rbnx build` inherits the shell environment, so the variable reaches this
 # script unchanged).
-ROS_DISTRO_BUILD="${ROBONIX_SCENE_ROS_DISTRO:-humble}"
+ROS_DISTRO_BUILD="${ROBONIX_SCENE_ROS_DISTRO:-jazzy}"
 UPSTREAM_ROS_BASE_IMAGE="ros:${ROS_DISTRO_BUILD}-ros-base"
 DEFAULT_ROS_BASE_IMAGE="robonix-ros:${ROS_DISTRO_BUILD}-ros-base"
 ROS_BASE_IMAGE="${ROBONIX_SCENE_ROS_BASE_IMAGE:-$DEFAULT_ROS_BASE_IMAGE}"
@@ -446,7 +447,7 @@ if [[ -d "$IDL/src/map" ]]; then
     # HOME=/tmp gives colcon a writable home for its metadata as that uid.
     docker run --rm --entrypoint bash --user "$(id -u):$(id -g)" -e HOME=/tmp \
         -v "$PKG":/scene "$IMG" -lc \
-        "source /opt/ros/\${ROS_DISTRO:-humble}/setup.bash && \
+        "source /opt/ros/\${ROS_DISTRO:-jazzy}/setup.bash && \
          cd /scene/rbnx-build/codegen/ros2_idl && \
          colcon build --packages-up-to map"
 else

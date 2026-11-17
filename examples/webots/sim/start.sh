@@ -63,8 +63,8 @@ fi
 source "$REPO_ROOT/scripts/docker_base_image.sh"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/nvidia_host.sh"
-export ROBONIX_SIM_ROS_BASE_IMAGE="${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:humble-desktop-full}"
-robonix_ensure_local_base_image "$ROBONIX_SIM_ROS_BASE_IMAGE" "osrf/ros:humble-desktop-full"
+export ROBONIX_SIM_ROS_BASE_IMAGE="${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:jazzy-desktop-full}"
+robonix_ensure_local_base_image "$ROBONIX_SIM_ROS_BASE_IMAGE" "osrf/ros:jazzy-desktop-full"
 cd "$SCRIPT_DIR"
 
 # Webots world / robot launch args.
@@ -255,7 +255,7 @@ for _ in $(seq 1 60); do
         exit 1
     fi
     if docker exec "$SIM_CT" bash -lc \
-        'source /opt/ros/humble/setup.bash 2>/dev/null &&
+        'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash 2>/dev/null &&
          timeout 4 ros2 topic echo --once /odom >/dev/null 2>&1 &&
          timeout 4 ros2 topic echo --once /head_front_camera/rgb/image_raw >/dev/null 2>&1 &&
          timeout 4 ros2 topic echo --once /scanner >/dev/null 2>&1'; then
@@ -308,7 +308,7 @@ if [[ "${ROBONIX_SIM_STREAM:-0}" = "1" ]]; then
   echo
 fi
 
-# Auto-launch rviz2 inside the sim container (it has ros-humble-rviz2,
+# Auto-launch rviz2 inside the sim container (it has ros-jazzy-rviz2,
 # host doesn't have to). Same DDS bus as the rest of the stack so
 # /map, /scanner, /tf, /goal_pose all work. User can click "2D Nav
 # Goal" → simple_nav drives the robot.

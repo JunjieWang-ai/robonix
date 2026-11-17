@@ -24,7 +24,7 @@
 # When WEBOTS_STREAM=1, Webots keeps its raw stream on :1234 while a
 # configurable proxy and viewer expose the browser-facing endpoints.
 set -eo pipefail
-source /opt/ros/humble/setup.bash
+source /opt/ros/${ROS_DISTRO:?ROS_DISTRO unset in image}/setup.bash
 source /colcon_ws/install/setup.bash
 set -u
 
@@ -118,7 +118,7 @@ start_zenoh_router() {
   if [ "${RMW_IMPLEMENTATION:-}" != "rmw_zenoh_cpp" ]; then
     return 0
   fi
-  local router_bin="/opt/ros/humble/lib/rmw_zenoh_cpp/rmw_zenohd"
+  local router_bin="/opt/ros/${ROS_DISTRO:?ROS_DISTRO unset in image}/lib/rmw_zenoh_cpp/rmw_zenohd"
   if [ ! -x "$router_bin" ]; then
     echo "[entrypoint] rmw_zenohd not found at $router_bin"
     return 1

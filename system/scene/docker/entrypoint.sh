@@ -14,7 +14,7 @@ set -eo pipefail
 # only ROS coupling in scene, and it follows the build-time ROS_DISTRO
 # arg — Robonix does not bind to a single ROS release.
 # shellcheck disable=SC1091
-source "/opt/ros/${ROS_DISTRO:-humble}/setup.bash"
+source "/opt/ros/${ROS_DISTRO:-jazzy}/setup.bash"
 
 # Robonix ros2_idl overlay (generated `map` interface package — mapping's
 # latched lifecycle broadcast that scene's map binding subscribes to).
@@ -30,7 +30,7 @@ configure_zenoh_session() {
     if [ "${RMW_IMPLEMENTATION:-}" != "rmw_zenoh_cpp" ] || [ -z "${ROBONIX_ZENOH_ROUTER:-}" ]; then
         return 0
     fi
-    local src="/opt/ros/${ROS_DISTRO:-humble}/share/rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_SESSION_CONFIG.json5"
+    local src="/opt/ros/${ROS_DISTRO:-jazzy}/share/rmw_zenoh_cpp/config/DEFAULT_RMW_ZENOH_SESSION_CONFIG.json5"
     local dst="/tmp/robonix_zenoh_session.json5"
     if [ ! -f "$src" ]; then
         echo "[entrypoint] missing Zenoh session config: $src" >&2

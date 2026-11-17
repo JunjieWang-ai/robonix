@@ -43,7 +43,7 @@ exec docker exec \
   "$SIM_CT" \
   bash -lc 'set -eo pipefail
             set +u
-            source /opt/ros/humble/setup.bash >/dev/null
+            source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash >/dev/null
             cd /robonix_pkgs/primitives/tiago_chassis
             LOG=/tmp/tiago_chassis_driver.log
             : > "$LOG"

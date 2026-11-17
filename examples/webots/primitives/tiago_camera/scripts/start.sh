@@ -26,7 +26,7 @@ fi
 # in mapping/scene.
 docker exec -d "$SIM_CT" bash -lc "
     set +u
-    source /opt/ros/humble/setup.bash >/dev/null
+    source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash >/dev/null
     export RMW_IMPLEMENTATION=\"${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}\"
     exec ros2 run tf2_ros static_transform_publisher \
         --x 0 --y 0 --z 0 --yaw 0 --pitch 0 --roll 0 \
@@ -34,7 +34,7 @@ docker exec -d "$SIM_CT" bash -lc "
 " &>/dev/null
 docker exec -d "$SIM_CT" bash -lc "
     set +u
-    source /opt/ros/humble/setup.bash >/dev/null
+    source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash >/dev/null
     export RMW_IMPLEMENTATION=\"${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}\"
     exec ros2 run tf2_ros static_transform_publisher \
         --x 0 --y 0 --z 0 --yaw 0 --pitch 0 --roll 0 \
@@ -64,7 +64,7 @@ exec docker exec \
   "$SIM_CT" \
   bash -lc 'set -eo pipefail
             set +u
-            source /opt/ros/humble/setup.bash >/dev/null
+            source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash >/dev/null
             cd /robonix_pkgs/primitives/tiago_camera
             LOG=/tmp/tiago_camera_driver.log
             : > "$LOG"

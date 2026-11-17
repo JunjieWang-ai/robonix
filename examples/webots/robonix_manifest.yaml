@@ -165,8 +165,12 @@ service:
   # Mapping publishes the occupancy, point cloud, pose, and map-management
   # contracts consumed by Navigation and Scene.
   - name: mapping
-    url: https://github.com/syswonder/service-map-rbnx
-    branch: main
+    url: https://github.com/JunjieWang-ai/service-map-rbnx
+    branch: feat/ros2-jazzy-noble
+    # Fork branch: ROS 2 Jazzy on noble (see JunjieWang-ai forks). Point back
+    # at syswonder/main once an upstream PR lands. The two scene-eval manifests
+    # keep pointing at syswonder feat/map-localizer (Humble) and are knowingly
+    # broken this round (cache-dir collision: repo-basename-keyed).
     config:
       use_sim_time: true
       # 2-D lidar scan matching; RTAB-Map's walls drift over a long session.
@@ -192,8 +196,8 @@ service:
   # mapping (its /map provider); on_init returns Deferred until mapping is
   # up, so order is a convenience, not a hard requirement.
   - name: nav2
-    url: https://github.com/syswonder/service-navigation-rbnx
-    branch: main
+    url: https://github.com/JunjieWang-ai/service-navigation-rbnx
+    branch: feat/ros2-jazzy-noble
     config:
       params_file: config/nav2_params.yaml
       use_sim_time: true
@@ -221,6 +225,6 @@ service:
 skill:
   # explore_rbnx — autonomous frontier exploration.
   - name: explore
-    url: https://github.com/syswonder/skill-explore-rbnx
-    branch: main
+    url: https://github.com/JunjieWang-ai/skill-explore-rbnx
+    branch: feat/ros2-jazzy-noble
     config: {}

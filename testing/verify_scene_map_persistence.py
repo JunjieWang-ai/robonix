@@ -201,7 +201,7 @@ print(json.dumps(box["msg"], ensure_ascii=False))
 """
     shell = (
         "set -eo pipefail\n"
-        "source /opt/ros/humble/setup.bash\n"
+        "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash\n"
         "export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}\n"
         "python3 - <<'PY'\n" + code + "\nPY\n"
     )

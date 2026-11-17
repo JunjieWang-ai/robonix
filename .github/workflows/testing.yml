@@ -858,8 +858,8 @@ jobs:
               return 1
             }
           fi
-          export ROBONIX_SIM_ROS_BASE_IMAGE="${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:humble-desktop-full}"
-          robonix_ensure_local_base_image "$ROBONIX_SIM_ROS_BASE_IMAGE" "osrf/ros:humble-desktop-full"
+          export ROBONIX_SIM_ROS_BASE_IMAGE="${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:jazzy-desktop-full}"
+          robonix_ensure_local_base_image "$ROBONIX_SIM_ROS_BASE_IMAGE" "osrf/ros:jazzy-desktop-full"
           export ROBONIX_WEBOTS_CACHE_VOLUME="${ROBONIX_WEBOTS_CACHE_VOLUME:-robonix_ci_webots_cache}"
           docker volume create "$ROBONIX_WEBOTS_CACHE_VOLUME" >/dev/null
           cache_count=$(docker run --rm -v "$ROBONIX_WEBOTS_CACHE_VOLUME:/cache" busybox sh -lc 'find /cache -type f 2>/dev/null | wc -l')
@@ -895,7 +895,7 @@ jobs:
             up --build -d
           # robot publishes /scanner /odom /head_front_camera/* within ~15s.
           for i in $(seq 1 40); do
-            if docker exec "$ROBONIX_SIM_CONTAINER" bash -lc 'source /opt/ros/humble/setup.bash 2>/dev/null && ros2 topic list 2>/dev/null | grep -qx /scanner' 2>/dev/null; then
+            if docker exec "$ROBONIX_SIM_CONTAINER" bash -lc 'source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash 2>/dev/null && ros2 topic list 2>/dev/null | grep -qx /scanner' 2>/dev/null; then
               echo "sim up"
               break
             fi
@@ -1079,7 +1079,7 @@ jobs:
           echo "waiting for a real /map OccupancyGrid publisher before scenario execution"
           if docker exec "$ROBONIX_SIM_CONTAINER" bash -lc '
             set -eo pipefail
-            source /opt/ros/humble/setup.bash
+            source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
             set -u
             export ROS_DOMAIN_ID='"${ROS_DOMAIN_ID}"'
             export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}"
@@ -1107,7 +1107,7 @@ jobs:
             echo "=== ROS topic list from simulator container ==="
             docker exec "$ROBONIX_SIM_CONTAINER" bash -lc '
               set -eo pipefail
-              source /opt/ros/humble/setup.bash
+              source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
               set -u
               export ROS_DOMAIN_ID='"${ROS_DOMAIN_ID}"'
               ros2 topic list || true
@@ -1217,7 +1217,7 @@ jobs:
           docker cp "$GITHUB_WORKSPACE/testing/nav_stress.py" "$ROBONIX_NAV2_CONTAINER:/tmp/nav_stress.py"
           status=0
           docker exec "$ROBONIX_NAV2_CONTAINER" bash -c '
-            source /opt/ros/humble/setup.bash
+            source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
             export $(tr "\0" "\n" < /proc/1/environ | grep -E "^PYTHONPATH=")
             export ZENOH_SESSION_CONFIG_URI=/tmp/robonix_zenoh_session.json5
             python3 -u /tmp/nav_stress.py --goals 10 --seed 1 --explore-s 120 --out /tmp/nav-stress.json
@@ -1235,7 +1235,7 @@ jobs:
         run: |
           set -uo pipefail
           docker exec -i "$ROBONIX_SIM_CONTAINER" bash <<'EOS'
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
           export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}
           python3 - <<'PY'
           import math, time
@@ -1419,7 +1419,7 @@ jobs:
               # slow turn in place shows it the room.
               echo "no object after 60 s; turning the robot once in place"
               docker exec -i "$ROBONIX_SIM_CONTAINER" bash <<'EOS' || true
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
           export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}
           python3 - <<'PY'
           import math, time
@@ -1481,7 +1481,7 @@ jobs:
           timeout --signal=TERM --kill-after=15 300 \
             docker exec -i "$ROBONIX_SIM_CONTAINER" bash -lc '
             set -eo pipefail
-            source /opt/ros/humble/setup.bash
+            source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
             set -u
             export ROS_DOMAIN_ID='"${ROS_DOMAIN_ID}"'
             export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}"

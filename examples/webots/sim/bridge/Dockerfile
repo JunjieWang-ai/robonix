@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MulanPSL-2.0
-# ROS 2 Humble + Webots (GUI) + Nav2 deps + Python deps for robonix
+# ROS 2 Jazzy + Webots (GUI) + Nav2 deps + Python deps for robonix
 # drivers that get `docker exec`'d into this container by `rbnx boot`.
 # This image is the SIM container; it does NOT contain robonix driver
 # code. Driver code lives in each primitive/service package directory
 # on the host and is bind-mounted in by compose.yaml under /robonix_pkgs.
 # Build context = the directory containing this Dockerfile (sim/bridge/).
-ARG ROS_BASE_IMAGE=osrf/ros:humble-desktop-full
+ARG ROS_BASE_IMAGE=osrf/ros:jazzy-desktop-full
 FROM ${ROS_BASE_IMAGE}
 
 # ── TUNA mirrors ───────────────────────────────────────────────────
@@ -42,40 +42,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-colcon-common-extensions \
     unzip \
-    ros-humble-nav2-msgs \
-    ros-humble-nav2-bringup \
-    ros-humble-webots-ros2 \
-    ros-humble-webots-ros2-driver \
-    ros-humble-controller-manager \
-    ros-humble-diagnostic-updater \
-    ros-humble-diff-drive-controller \
-    ros-humble-joint-state-broadcaster \
-    ros-humble-robot-state-publisher \
-    ros-humble-tf2-ros \
-    ros-humble-rmw-zenoh-cpp \
+    ros-jazzy-nav2-msgs \
+    ros-jazzy-nav2-bringup \
+    ros-jazzy-webots-ros2 \
+    ros-jazzy-webots-ros2-driver \
+    ros-jazzy-controller-manager \
+    ros-jazzy-diagnostic-updater \
+    ros-jazzy-diff-drive-controller \
+    ros-jazzy-joint-state-broadcaster \
+    ros-jazzy-robot-state-publisher \
+    ros-jazzy-tf2-ros \
+    ros-jazzy-rmw-zenoh-cpp \
     wget \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# tf2 0.25.23, the Humble release at the time of writing, deadlocks a
-# Buffer: waitForTransform and the listener's testTransformableRequests take
-# the same two locks in opposite order (ros2/geometry2#982). rviz2 runs in
-# this container and stops responding a few minutes into mapping. 0.25.24
-# fixes it and so far only ros2-testing carries it; the navigation package
-# image does the same. Remove this step once the main repository has 0.25.24.
-RUN set -eux; \
-    sed -e 's|^URIs: .*|URIs: http://packages.ros.org/ros2-testing/ubuntu|' \
-        -e 's|^Types: .*|Types: deb|' \
-        /etc/apt/sources.list.d/ros2.sources > /etc/apt/sources.list.d/ros2-testing.sources; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends --only-upgrade \
-        $(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'ros-humble-tf2*' | awk '$1 == "ii" {print $2}'); \
-    rm /etc/apt/sources.list.d/ros2-testing.sources; \
-    rm -rf /var/lib/apt/lists/*; \
-    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' ros-humble-tf2-ros)" ge 0.25.24
+# tf2 (ros2/geometry2#982) and its ros2-testing workaround: NOT needed on
+# Jazzy. The Humble-era hack pinned ros-humble-tf2* from the ros2-testing
+# repo to dodge a tf2 0.25.23 deadlock (rviz2 in this container stopped
+# responding a few minutes into mapping). Jazzy ships tf2 0.36.x where the
+# deadlock is long fixed, and this block is a guaranteed build failure on
+# noble anyway: dpkg-query resolves no ros-jazzy-tf2* packages from the
+# hack's own pattern, so dpkg --compare-versions "" ge 0.25.24 fails under
+# set -e. The same block also existed in the service-map/service-navigation
+# upstream images, which drop it in the same change.
 
 # Webots simulator (Cyberbotics .deb; apt "webots" is often unavailable on minimal images)
-# Match ros-humble-webots-ros2 (~2025.x) — see https://github.com/cyberbotics/webots/releases
+# Match ros-jazzy-webots-ros2 (2025.0.0) — see https://github.com/cyberbotics/webots/releases
 # Default URL uses ghfast.top mirror for reliable access; override with
 # --build-arg WEBOTS_DEB_URL=https://github.com/... for direct GitHub.
 ARG WEBOTS_DEB_URL=https://ghfast.top/https://github.com/cyberbotics/webots/releases/download/R2025a/webots_2025a_amd64.deb
@@ -107,8 +100,10 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1
 # Exact pins: this image exists for CI, and an open range here means any
 # upstream release can break every run overnight, as fastmcp 3.4.7 did.
 # Bump the set deliberately, in its own commit.
-RUN python3 -m pip install --no-cache-dir --upgrade pip && \
-    python3 -m pip install --no-cache-dir \
+# (noble's apt pip 24.0 is modern; do NOT `pip install --upgrade pip` here —
+# pip cannot uninstall the Debian-owned pip and the build fails with
+# "Cannot uninstall pip 24.0, RECORD file not found".)
+RUN python3 -m pip install --no-cache-dir \
     "grpcio==1.80.0" "protobuf==6.33.6" "mcp==1.29.0" "fastmcp==3.4.7" \
     numpy Pillow "uvicorn==0.52.3" "httpx==0.28.1" "websockets==16.1.1"
 
@@ -118,7 +113,7 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 # Compose passes context: ../ so we COPY from there.
 WORKDIR /colcon_ws
 COPY ros_ws/src/eaios_webots src/eaios_webots
-RUN bash -lc "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select eaios_webots"
+RUN bash -lc "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install --packages-select eaios_webots"
 
 COPY bridge/entrypoint.sh /entrypoint.sh
 COPY bridge/viewer_server.py /viewer_server.py

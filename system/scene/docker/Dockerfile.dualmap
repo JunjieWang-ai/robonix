@@ -35,6 +35,7 @@ RUN set -e; export https_proxy=$PROXY http_proxy=$PROXY; \
 RUN set -e; export https_proxy=$PROXY http_proxy=$PROXY; \
     pip install -q --no-cache-dir "supervision==0.25.1" distinctipy plyfile pympler dill tabulate \
         "numpy==1.26.4" \
+        scikit-learn \
  && pip install -q --no-deps -e /opt/dualmap/3rdparty/mobileclip \
  && python3 -c "import sys; sys.path.insert(0, '/opt/dualmap'); import dualmap, utils.object_detector, utils.local_map_manager; print('dualmap import ok')"
 

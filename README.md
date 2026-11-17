@@ -197,17 +197,17 @@ The Rust components and the Python packages are written to stay portable across 
 
 | Arch    | OS / Distribution                                  | Status     |
 | ------- | -------------------------------------------------- | ---------- |
-| x86\_64 | Ubuntu 22.04                                       | ✅ Tested  |
+| x86\_64 | Ubuntu 24.04                                       | ✅ Tested  |
+| x86\_64 | Ubuntu 22.04 (ROS 2 Humble fallback baseline)      | ✅ Tested  |
 | x86\_64 | Debian 13                                          | ✅ Tested  |
 | arm64   | NVIDIA Jetson — JetPack 6.2 (L4T 36.4.3, Ubuntu 22.04) | ✅ Tested  |
 | LoongArch64 | Loongson 3A6000 + AMD Radeon 7900 XTX — Loong ArchLinux 2026.08.07 | ✅ Tested |
-| x86\_64 / arm64 | Ubuntu 24.04 and newer                     | 🚧 Planned |
 
 > **Note (LoongArch64):** Robonix itself runs on the Loongson 3A6000 host, while the simulation platform (Webots) runs on a separate x86\_64 machine with Ubuntu 22.04. The two machines are connected over Ethernet on the same local area network (LAN).
 
 "Tested" means the full Robonix pipeline runs end-to-end on that platform — in simulation or on a real robot: voice & interaction, task execution, body movement, scene & mapping (semantic map + spatial map), navigation, and skill execution. Other Linux distributions will likely work but are not regularly verified.
 
-Capability providers that use ROS 2 are built and tested against [ROS 2 Humble](https://docs.ros.org/en/humble/).
+Capability providers that use ROS 2 are built and tested against [ROS 2 Jazzy](https://docs.ros.org/en/jazzy/) (Ubuntu 22.04 + Humble remains a supported fallback).
 
 ## System Architecture
 

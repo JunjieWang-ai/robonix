@@ -48,7 +48,7 @@ exec docker exec \
   bash -lc '''
     set -eo pipefail
     set +u
-    source /opt/ros/humble/setup.bash >/dev/null
+    source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash >/dev/null
     python3 /robonix_pkgs/primitives/tiago_lidar/scripts/scan_normalize.py \
         --in "$TIAGO_SCAN_RAW_TOPIC" --out "$TIAGO_SCAN_TOPIC" &
     NORM_PID=$!
