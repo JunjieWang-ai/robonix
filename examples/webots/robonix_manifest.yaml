@@ -173,8 +173,10 @@ service:
     # broken this round (cache-dir collision: repo-basename-keyed).
     config:
       use_sim_time: true
-      # 2-D lidar scan matching; RTAB-Map's walls drift over a long session.
-      algo: slam_toolbox
+      # Jazzy: async_slam_toolbox_node hangs silently in its constructor on
+      # noble (one log line, no interfaces created) — documented follow-up.
+      # rtabmap is this package's default+recommended engine.
+      algo: rtabmap
       sensor_providers:
         lidar2d: tiago_lidar
         odom: tiago_chassis
