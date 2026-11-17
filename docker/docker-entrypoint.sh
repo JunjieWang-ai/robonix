@@ -8,9 +8,12 @@ export XDG_RUNTIME_DIR=/tmp/runtime-root
 export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/osmesa:${LD_LIBRARY_PATH}
 export OSMESA_LIB=/usr/lib/x86_64-linux-gnu/libOSMesa.so
 
+# apt lists may be stale inside a long-lived image; without a refresh the
+# startup install below fails under `set -e` on noble.
+apt-get update >/dev/null 2>&1
 apt install -qq -y iputils-ping screenfetch >/dev/null 2>&1
 
-source /opt/ros/humble/setup.bash
+source /opt/ros/${ROS_DISTRO:?ROS_DISTRO unset in image}/setup.bash
 
 export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}"
 export ROBONIX_META_GRPC_ADDR="${ROBONIX_META_GRPC_ADDR:-0.0.0.0:50051}"
@@ -19,7 +22,7 @@ export ROBONIX_META_GRPC_ENDPOINT="${ROBONIX_META_GRPC_ENDPOINT:-127.0.0.1:50051
 if ! grep -q "### ROBONIX_DOCKER_ENV ###" ~/.bashrc 2>/dev/null; then
 cat <<'EOF' >> ~/.bashrc
 ### ROBONIX_DOCKER_ENV ###
-source /opt/ros/humble/setup.bash
+source /opt/ros/${ROS_DISTRO}/setup.bash
 export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}"
 export ROBONIX_META_GRPC_ADDR="${ROBONIX_META_GRPC_ADDR:-0.0.0.0:50051}"
 export ROBONIX_META_GRPC_ENDPOINT="${ROBONIX_META_GRPC_ENDPOINT:-127.0.0.1:50051}"

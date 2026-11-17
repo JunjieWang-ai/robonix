@@ -7,7 +7,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKSPACE_TARGET=..
 # shellcheck disable=SC1091
 source "$REPO_ROOT/scripts/docker_base_image.sh"
-ROBONIX_ROS_DEV_BASE_IMAGE="${ROBONIX_ROS_DEV_BASE_IMAGE:-robonix-osrf-ros:humble-desktop}"
+ROBONIX_ROS_DEV_BASE_IMAGE="${ROBONIX_ROS_DEV_BASE_IMAGE:-robonix-osrf-ros:jazzy-desktop}"
 
 if [ -f .env ]; then
     echo "[*] Loading environment variables from .env..."
@@ -68,7 +68,7 @@ if [ "$USE_LOCAL" = true ]; then
     # Build local image if it doesn't exist
     if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
         echo "[*] Local image not found, building..."
-        robonix_ensure_local_base_image "$ROBONIX_ROS_DEV_BASE_IMAGE" "osrf/ros:humble-desktop"
+        robonix_ensure_local_base_image "$ROBONIX_ROS_DEV_BASE_IMAGE" "osrf/ros:jazzy-desktop"
         docker build --pull=false --build-arg "ROS_BASE_IMAGE=$ROBONIX_ROS_DEV_BASE_IMAGE" -t "$IMAGE_NAME" "$SCRIPT_DIR"
     else
         echo "[*] Local image found, skipping build"
@@ -84,7 +84,7 @@ else
         IMAGE_NAME=$LOCAL_IMAGE
         if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
             echo "[*] Building local image as fallback..."
-            robonix_ensure_local_base_image "$ROBONIX_ROS_DEV_BASE_IMAGE" "osrf/ros:humble-desktop"
+            robonix_ensure_local_base_image "$ROBONIX_ROS_DEV_BASE_IMAGE" "osrf/ros:jazzy-desktop"
             docker build --pull=false --build-arg "ROS_BASE_IMAGE=$ROBONIX_ROS_DEV_BASE_IMAGE" -t "$IMAGE_NAME" "$SCRIPT_DIR"
         fi
     }

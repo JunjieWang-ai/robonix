@@ -1,4 +1,4 @@
-ARG ROS_BASE_IMAGE=osrf/ros:humble-desktop
+ARG ROS_BASE_IMAGE=osrf/ros:jazzy-desktop
 FROM ${ROS_BASE_IMAGE}
 
 # ── TUNA mirrors ───────────────────────────────────────────────────
@@ -28,10 +28,10 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget gnupg && \
-    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
-    apt-get install -y cuda-toolkit-12-4 && \
+    apt-get install -y cuda-toolkit-12-6 && \
     rm cuda-keyring_1.1-1_all.deb
 
 # RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
@@ -39,8 +39,8 @@ RUN apt-get update && apt-get install -y \
 #     rm Miniconda3-latest-Linux-x86_64.sh
 
 RUN apt update && apt install -y \
-    ros-humble-rmw-fastrtps-cpp \
-    ros-humble-rmw-zenoh-cpp \
+    ros-jazzy-rmw-fastrtps-cpp \
+    ros-jazzy-rmw-zenoh-cpp \
     python3-pip \
     python3-grpcio \
     python3-protobuf \
@@ -51,7 +51,6 @@ RUN apt update && apt install -y \
     wget \
     protobuf-compiler \
     libeigen3-dev \
-    libgl1-mesa-glx \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -65,8 +64,13 @@ RUN apt update && apt install -y \
     libclang-dev python3-vcstool \
     bash-completion \
     fonts-lmodern \
-    ros-humble-test-msgs \
+    ros-jazzy-test-msgs \
     python-is-python3
+
+# noble (24.04) marks the system Python as externally managed (PEP 668);
+# humble's 22.04 did not. Without this the bare pip3 installs below fail
+# with "externally-managed-environment". (Same ENV as the webots sim image.)
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 RUN pip3 install --no-cache-dir \
     grpcio-tools openai pyarrow "eclipse-zenoh>=1.2,<2" \
