@@ -14,7 +14,7 @@ if command -v rbnx >/dev/null 2>&1; then
     # Build the ROS 2 overlay inside the sim container (host has no ROS 2).
     if docker ps --format '{{.Names}}' | grep -qx "$SIM_CT"; then
       _IDL="/robonix_pkgs/$(basename "$(dirname "$PKG")")/$(basename "$PKG")/rbnx-build/codegen/ros2_idl"
-      docker exec "$SIM_CT" bash -lc "source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && cd $_IDL && colcon build"
+      docker exec "$SIM_CT" bash -lc "source /opt/ros/${ROS_DISTRO:-humble}/setup.bash && cd $_IDL && colcon build"
     else
       echo "[simple_nav] sim container '$SIM_CT' down — ROS 2 overlay not built; run sim/start.sh then rebuild"
     fi

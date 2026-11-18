@@ -1,4 +1,4 @@
-ARG ROS_BASE_IMAGE=osrf/ros:jazzy-desktop
+ARG ROS_BASE_IMAGE=osrf/ros:humble-desktop
 FROM ${ROS_BASE_IMAGE}
 
 # ── TUNA mirrors ───────────────────────────────────────────────────
@@ -28,10 +28,10 @@ ENV RMW_IMPLEMENTATION=rmw_zenoh_cpp
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget gnupg && \
-    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
-    apt-get install -y cuda-toolkit-12-6 && \
+    apt-get install -y cuda-toolkit-12-4 && \
     rm cuda-keyring_1.1-1_all.deb
 
 # RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \

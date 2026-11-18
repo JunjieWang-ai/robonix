@@ -42,17 +42,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-colcon-common-extensions \
     unzip \
-    ros-jazzy-nav2-msgs \
-    ros-jazzy-nav2-bringup \
-    ros-jazzy-webots-ros2 \
-    ros-jazzy-webots-ros2-driver \
-    ros-jazzy-controller-manager \
-    ros-jazzy-diagnostic-updater \
-    ros-jazzy-diff-drive-controller \
-    ros-jazzy-joint-state-broadcaster \
-    ros-jazzy-robot-state-publisher \
-    ros-jazzy-tf2-ros \
-    ros-jazzy-rmw-zenoh-cpp \
+    ros-$ROS_DISTRO-nav2-msgs \
+    ros-$ROS_DISTRO-nav2-bringup \
+    ros-$ROS_DISTRO-webots-ros2 \
+    ros-$ROS_DISTRO-webots-ros2-driver \
+    ros-$ROS_DISTRO-controller-manager \
+    ros-$ROS_DISTRO-diagnostic-updater \
+    ros-$ROS_DISTRO-diff-drive-controller \
+    ros-$ROS_DISTRO-joint-state-broadcaster \
+    ros-$ROS_DISTRO-robot-state-publisher \
+    ros-$ROS_DISTRO-tf2-ros \
+    ros-$ROS_DISTRO-rmw-zenoh-cpp \
     wget \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

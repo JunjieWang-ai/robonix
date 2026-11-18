@@ -31,7 +31,7 @@ exec docker exec \
     -e RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}" \
     "$SIM_CT" bash -lc '
         set -eo pipefail
-        source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
         OVL=/robonix_pkgs/services/simple_nav/rbnx-build/codegen/ros2_idl/install/setup.bash
         [ -f "$OVL" ] && source "$OVL" || true
         cd /robonix_pkgs/services/simple_nav

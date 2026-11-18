@@ -1,0 +1,234 @@
+# ROS 2 Jazzy / Ubuntu 24.04 deployment: the three service/skill packages
+# come from the JunjieWang-ai fork branches carrying the Jazzy migration
+# (upstream syswonder main stays on Humble). First-party defaults stay
+# Humble; this manifest plus ROBONIX_*_ROS_BASE_IMAGE / ROBONIX_SCENE_ROS_DISTRO
+# selects the Jazzy runtime.
+manifestVersion: 1
+name: robonix-webots-example-deploy-jazzy
+
+# Default Webots boot starts a fresh live SLAM session. The map/room UI
+# names and persists that session when the operator clicks Save; clicking
+# Load later switches mapping to localization mode and binds scene objects +
+# room annotations to the selected saved map. Do not set SCENE_MAP_ID here: a
+# static default would make a first run look like a loaded map.
+# Webots already owns robot_state_publisher and publishes /robot_description,
+# /tf, and /tf_static. Do not add robot-description-rbnx to this simulator
+# manifest; the generic primitive is for deployments without another URDF/TF
+# publisher.
+
+# boot in sequence: system -> soma+scene -> execution -> interaction
+system:
+  # basic layer
+  atlas:
+    listen: 0.0.0.0:50051
+    log: info
+  soma:
+    # Empty when boot is invoked directly, so rbnx falls back to ./soma.yaml.
+    # examples/webots/boot.sh sets this to soma.full.yaml for the full model.
+    robot_yaml: ${ROBONIX_SOMA_ROBOT_YAML}
+    # Webots keeps ROS 2 inside the simulator container. Soma still owns and
+    # exposes the state; only its private topic reader runs beside ROS 2.
+    runtime_reader_command:
+      - docker
+      - exec
+      - robonix_tiago_sim
+      - bash
+      - -lc
+      - source /opt/ros/${ROS_DISTRO:-jazzy}/setup.bash && exec python3 -u /robonix_runtime/soma/soma_runtime_ros.py /robonix_runtime/soma/soma_runtime_sources.json
+  # soma+scene layer
+  scene: {}
+  # execution layer
+  executor:
+    # robonix-client polls Executor for authoritative active RTDL plans.
+    # Bind externally on trusted LAN/Tailscale deployments.
+    listen: 0.0.0.0:50061
+    # verifier.
+    verification:
+      overlap: true
+      rules:
+        - target_contract_id: robonix/service/navigation/navigate
+          target_provider_id: nav2
+          verifier_provider_id: scene_verifier
+          verifier_args:
+            scene_provider_id: scene
+            check_yaw: true
+  # interaction layer
+  pilot:
+    listen: 127.0.0.1:50071
+    vlm:
+      upstream: ${VLM_BASE_URL}
+      api_key: ${VLM_API_KEY}
+      model: ${VLM_MODEL}
+  # health monitoring layer
+  vitals:
+    listen: 127.0.0.1:50093
+    log: info
+  liaison:
+    listen: 0.0.0.0:50081
+
+# after booted all the system components, start the devices (primitives)
+# the robonix boot "device tree"
+primitive:
+  - name: tiago_chassis
+    path: ./primitives/tiago_chassis
+    config: {}
+  - name: tiago_camera
+    path: ./primitives/tiago_camera
+    config:
+      width: 640
+      height: 480
+      # Webots Tiago head camera calibration for the intrinsics contract.
+      # The simulator does not publish CameraInfo, so the camera primitive
+      # publishes this deployment-provided K on /tiago/camera/intrinsics.
+      fx: 554.0
+      fy: 554.0
+      cx: 320.0
+      cy: 240.0
+      # First-RGB-frame wait at INIT. Webots under a CPU-starved boot (all
+      # drivers initialising at once) can take well over a minute to deliver
+      # the first frame — lidar alone routinely needs ~70s — so the default
+      # 60s is too tight here. Match the lidar tolerance with headroom.
+      sentinel_timeout_s: 150
+  - name: tiago_lidar
+    path: ./primitives/tiago_lidar
+    config:
+      # example place holders
+      update_rate: 10
+      frame_id: lidar
+      sentinel_timeout_s: 150
+  # Deterministic simulated hardware telemetry consumed by Soma and Vitals.
+  # Keep scenario=normal for the current demo; the field is reserved as the
+  # stable entry point for future fault-injection profiles.
+  - name: tiago_health
+    path: ./primitives/tiago_health
+    config:
+      # Empty means lite; boot.sh sets full alongside soma.full.yaml.
+      variant: ${ROBONIX_TIAGO_VARIANT}
+      scenario: normal
+      interval_s: 0.5
+      battery_percent: 82.0
+      voltage: 24.8
+      remaining_s: 10800
+  # ── audio mic/speaker source ─────────────────────────────────────────────
+  # Local ALSA provider. It remains available for robot-local audio.
+  - name: audio_driver
+    url: https://github.com/syswonder/primitive-audio-driver-rbnx
+    branch: main
+    config: {}
+  # Reverse bridge for a robonix-client audio route. It advertises its
+  # endpoint through Atlas and waits for the client to connect, so neither
+  # this manifest nor Liaison stores a client IP.
+  - name: audio_client_bridge
+    url: https://github.com/syswonder/primitive-audio-client-bridge-rbnx
+    branch: main
+    config: {}
+
+# after booted all the primitives, start the services
+service:
+  # ── Memory services (two parallel backends) ──────────────────────────
+  # Memgraph (Scribe Mem) — structured CKG memory (BM25 + Embedding).
+  # Contracts: robonix/service/memory/{remember,hybrid_search,promote}
+  # Embedding: all-MiniLM-L6-v2 (d=384), BM25 + Cosine hybrid retrieval.
+  - name: memgraph
+    path: ../../services/memory
+    config:
+      backend: memgraph
+
+  # memsearch — default reference long-term-memory service for the
+  # agent. Lives at services/memsearch in the robonix tree; pilot
+  # queries it for relevant past context when planning.
+  - name: memory
+    path: ${ROBONIX_SOURCE_PATH}/services/memsearch
+    config: {}
+
+  # speech — ASR + TTS. Provides robonix/service/speech/asr_stream + tts that
+  # liaison's voice loop connects to. The selected audio provider is supplied
+  # by the client for F2, voice steer, and hands-free turns.
+  # disable_whisper => sherpa-onnx streaming ASR without one-shot Whisper.
+  - name: speech
+    path: ${ROBONIX_SOURCE_PATH}/services/speech
+    config:
+      # Empty/unset SPEECH_BACKEND preserves the local backend. Set it to
+      # tencent before build+boot for the lightweight cloud path.
+      speech_backend: ${SPEECH_BACKEND}
+      disable_whisper: true
+      tts_voice: zh-CN-XiaoxiaoNeural
+      default_speaker_provider_id: audio_driver
+      tencent_asr_appid: ${TENCENT_ASR_APPID}
+      tencent_tts_voice_type: 502003
+
+  # voiceprint — CAM++ speaker identification. Provides
+  # robonix/service/voiceprint/{identify,enroll,list}: liaison's voice gate
+  # stamps each Task with the identified user_id, and `rbnx chat`'s user
+  # modal enrolls/lists speakers. Default threshold is 0.55; deployment
+  # configuration can override it.
+  - name: voiceprint
+    path: ${ROBONIX_SOURCE_PATH}/services/voiceprint
+    config: {}
+
+  # Mapping publishes the occupancy, point cloud, pose, and map-management
+  # contracts consumed by Navigation and Scene.
+  - name: mapping
+    url: https://github.com/JunjieWang-ai/service-map-rbnx
+    branch: feat/ros2-jazzy-noble
+    config:
+      use_sim_time: true
+      # 2-D lidar scan matching; RTAB-Map's walls drift over a long session.
+      # Jazzy: async_slam_toolbox_node hangs silently in its constructor on
+      # noble (one log line, no interfaces) — follow-up. rtabmap is the
+      # mapping package's default+recommended engine.
+      algo: rtabmap
+      sensor_providers:
+        lidar2d: tiago_lidar
+        odom: tiago_chassis
+  - name: scene_verifier
+    path: ${ROBONIX_SOURCE_PATH}/services/verifiers/scene_verifier
+    config:
+      distance_tolerance_m: 0.5
+      yaw_tolerance_rad: 0.35
+      observation_timeout_s: 5.0
+
+  # nav2_wrapper_rbnx IS the navigation service for this deploy.
+  #
+  # Wraps a standard Nav2 stack. Discovers its inputs through atlas — /map
+  # (mapping/occupancy_grid), /odom (chassis/odom), /scan (lidar/lidar) —
+  # and drives /cmd_vel via Nav2's navigate_to_pose action. Runs in the
+  # `robonix-nav2` docker image (built by `rbnx build`, so the host needs
+  # no ROS2). The complete simulator Nav2 configuration is deployment-owned
+  # under config/. Listed after
+  # mapping (its /map provider); on_init returns Deferred until mapping is
+  # up, so order is a convenience, not a hard requirement.
+  - name: nav2
+    url: https://github.com/JunjieWang-ai/service-navigation-rbnx
+    branch: feat/ros2-jazzy-noble
+    config:
+      params_file: config/nav2_params.yaml
+      bt_xml_file: config/navigate_to_pose.xml
+      use_sim_time: true
+      action_wait_s: 240.0
+      # Keep startup behavior at the controller's existing 0.26 m/s ceiling;
+      # runtime speed commands can then adjust it in 20-point increments.
+      dynamic_speed:
+        max_linear_speed_mps: 0.26
+        default_percentage: 100
+        step_percentage: 20
+        min_percentage: 20
+      # The simulation goal checker enters at 0.25 m. Keep the terminal
+      # rotation guard inside that boundary so path-alignment turns are not
+      # mistaken for a stuck final-yaw correction.
+      guard_terminal_xy_m: 0.20
+      provider_ids:
+        map: mapping
+        odom: tiago_chassis
+        scan: tiago_lidar
+        # Head depth camera: obstacles above the lidar's plane, such as
+        # table tops (__ROBONIX_DEPTH_CLOUD_TOPIC__ in config/nav2_params.yaml).
+        depth: tiago_camera
+
+# after booted all the services, register the skills (but don't activate them now)
+skill:
+  # explore_rbnx — autonomous frontier exploration.
+  - name: explore
+    url: https://github.com/JunjieWang-ai/skill-explore-rbnx
+    branch: feat/ros2-jazzy-noble
+    config: {}

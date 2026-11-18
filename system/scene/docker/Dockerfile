@@ -10,7 +10,7 @@
 # is running.
 #
 # ROS distro is NOT hard-pinned: Robonix does not bind to a single ROS
-# release. Pick it with the `ROS_DISTRO` build arg (default `jazzy`); the
+# release. Pick it with the `ROS_DISTRO` build arg (default `humble`); the
 # base image, the `ros-<distro>-*` apt packages, and the runtime
 # `source /opt/ros/<distro>/setup.bash` all follow it. Supported distros
 # (tf2 + rmw-zenoh available in the index): humble (zenoh-bridge-dds also
@@ -33,8 +33,8 @@
 # ROS_BASE_IMAGE, defaulting to a local robonix-ros:<distro>-ros-base alias so
 # BuildKit does not query Docker Hub metadata on every rebuild. Override with
 # ROBONIX_SCENE_ROS_BASE_IMAGE for a mirror, digest-pinned base, or custom image.
-ARG ROS_DISTRO=jazzy
-ARG ROS_BASE_IMAGE=robonix-ros:jazzy-ros-base
+ARG ROS_DISTRO=humble
+ARG ROS_BASE_IMAGE=robonix-ros:humble-ros-base
 FROM ${ROS_BASE_IMAGE}
 
 # noble (24.04) marks the system Python as externally managed (PEP 668);
@@ -116,10 +116,16 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         rm -rf /var/lib/apt/lists/* \
     '
 
-# pip: do NOT use proxy. noble's apt pip 24.0 is modern enough — do NOT
-# `pip install --upgrade pip` here: pip cannot uninstall the Debian-owned
-# pip (no RECORD file: "Cannot uninstall pip 24.0, RECORD file not found"),
-# so that step is a guaranteed build failure on noble.
+# pip: do NOT use proxy.
+# Upgrade pip ONLY on the jammy/python3.10 era: pip 22.0.2's resolver hits
+# the get_topological_weights AssertionError on the sets below. On noble
+# (python3.12, pip 24.0) the upgrade is a guaranteed build failure — pip
+# cannot uninstall the Debian-owned apt pip (no RECORD file: "Cannot
+# uninstall pip 24.0, RECORD file not found") — and 24.0 is past that
+# resolver bug anyway.
+RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    without-proxy sh -c 'python3 -c "import sys; raise SystemExit(0 if sys.version_info < (3, 12) else 1)" \
+        && python3 -m pip install --upgrade pip'
 
 # torch + torchvision — sm_120 (Blackwell / RTX 5090) requires
 # torch 2.7+ with CUDA 12.8 kernels. cu124 wheels only cover up to

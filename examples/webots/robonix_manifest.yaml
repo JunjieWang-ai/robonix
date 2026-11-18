@@ -139,7 +139,7 @@ service:
   # speech — ASR + TTS. Provides robonix/service/speech/asr_stream + tts that
   # liaison's voice loop connects to. The selected audio provider is supplied
   # by the client for F2, voice steer, and hands-free turns.
-  # disable_whisper => FunASR-only (Paraformer) streaming ASR path.
+  # disable_whisper => sherpa-onnx streaming ASR without one-shot Whisper.
   - name: speech
     path: ${ROBONIX_SOURCE_PATH}/services/speech
     config:
@@ -147,17 +147,16 @@ service:
       # tencent before build+boot for the lightweight cloud path.
       speech_backend: ${SPEECH_BACKEND}
       disable_whisper: true
-      funasr_device: cuda
       tts_voice: zh-CN-XiaoxiaoNeural
       default_speaker_provider_id: audio_driver
       tencent_asr_appid: ${TENCENT_ASR_APPID}
       tencent_tts_voice_type: 502003
 
-  # voiceprint — ECAPA-TDNN speaker identification. Provides
+  # voiceprint — CAM++ speaker identification. Provides
   # robonix/service/voiceprint/{identify,enroll,list}: liaison's voice gate
   # stamps each Task with the identified user_id, and `rbnx chat`'s user
-  # modal enrolls/lists speakers. Config is env-driven (port 50092,
-  # threshold 0.25, device auto) so the manifest block stays empty.
+  # modal enrolls/lists speakers. Default threshold is 0.55; deployment
+  # configuration can override it.
   - name: voiceprint
     path: ${ROBONIX_SOURCE_PATH}/services/voiceprint
     config: {}
@@ -165,18 +164,12 @@ service:
   # Mapping publishes the occupancy, point cloud, pose, and map-management
   # contracts consumed by Navigation and Scene.
   - name: mapping
-    url: https://github.com/JunjieWang-ai/service-map-rbnx
-    branch: feat/ros2-jazzy-noble
-    # Fork branch: ROS 2 Jazzy on noble (see JunjieWang-ai forks). Point back
-    # at syswonder/main once an upstream PR lands. The two scene-eval manifests
-    # keep pointing at syswonder feat/map-localizer (Humble) and are knowingly
-    # broken this round (cache-dir collision: repo-basename-keyed).
+    url: https://github.com/syswonder/service-map-rbnx
+    branch: main
     config:
       use_sim_time: true
-      # Jazzy: async_slam_toolbox_node hangs silently in its constructor on
-      # noble (one log line, no interfaces created) — documented follow-up.
-      # rtabmap is this package's default+recommended engine.
-      algo: rtabmap
+      # 2-D lidar scan matching; RTAB-Map's walls drift over a long session.
+      algo: slam_toolbox
       sensor_providers:
         lidar2d: tiago_lidar
         odom: tiago_chassis
@@ -198,10 +191,11 @@ service:
   # mapping (its /map provider); on_init returns Deferred until mapping is
   # up, so order is a convenience, not a hard requirement.
   - name: nav2
-    url: https://github.com/JunjieWang-ai/service-navigation-rbnx
-    branch: feat/ros2-jazzy-noble
+    url: https://github.com/syswonder/service-navigation-rbnx
+    branch: main
     config:
       params_file: config/nav2_params.yaml
+      bt_xml_file: config/navigate_to_pose.xml
       use_sim_time: true
       action_wait_s: 240.0
       # Keep startup behavior at the controller's existing 0.26 m/s ceiling;
@@ -227,6 +221,6 @@ service:
 skill:
   # explore_rbnx — autonomous frontier exploration.
   - name: explore
-    url: https://github.com/JunjieWang-ai/skill-explore-rbnx
-    branch: feat/ros2-jazzy-noble
+    url: https://github.com/syswonder/skill-explore-rbnx
+    branch: main
     config: {}

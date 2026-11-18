@@ -26,7 +26,7 @@ PY="${SCENE_NATIVE_PYTHON:-python3}"
     exit 1
 }
 
-ROS_DISTRO="${ROS_DISTRO:-jazzy}"
+ROS_DISTRO="${ROS_DISTRO:-humble}"
 # shellcheck disable=SC1091
 set +u; source "/opt/ros/${ROS_DISTRO}/setup.bash"; set -u
 

@@ -100,11 +100,18 @@ def generate_launch_description():
     )
 
 
+    # Both distros keep the ROS-graph contract at a plain Twist on /cmd_vel
+    # (nav2, the velocity guard, the chassis capability, and teleop all
+    # publish geometry_msgs/Twist):
+    # - Humble: use_stamped_vel:false in ros2_control.yml makes the
+    #   controller subscribe ~/cmd_vel with a plain Twist.
+    # - Jazzy (ros2_control 4.x removed use_stamped_vel): the plain-Twist
+    #   input moved to ~/cmd_vel_unstamped; ~/cmd_vel is TwistStamped-only.
     use_twist_stamped = 'ROS_DISTRO' in os.environ and (os.environ['ROS_DISTRO'] in ['rolling', 'jazzy', 'kilted'])
     if use_twist_stamped:
-        mappings = [('/diffdrive_controller/cmd_vel', '/cmd_vel'), ('/diffdrive_controller/odom', '/odom')]
-    else:
         mappings = [('/diffdrive_controller/cmd_vel_unstamped', '/cmd_vel'), ('/diffdrive_controller/odom', '/odom')]
+    else:
+        mappings = [('/diffdrive_controller/cmd_vel', '/cmd_vel'), ('/diffdrive_controller/odom', '/odom')]
     ros2_control_params = os.path.join(package_dir, 'resource', 'ros2_control.yml')
     my_robot_driver = WebotsController(
         robot_name='my_robot', # Ensure this name matches the robot node name in the Webots world.
