@@ -125,6 +125,19 @@ def generate_launch_description():
         respawn=True
     )
 
+    # Jazzy+ only: the DiffDriveController builds its ~/cmd_vel subscription
+    # name itself (TwistStamped), so launch remappings never reach it. This
+    # relay keeps the graph contract at a plain Twist on /cmd_vel and adapts
+    # at the one seam. On Humble the controller takes a plain Twist directly.
+    twist_relay = None
+    if use_twist_stamped:
+        from launch.actions import ExecuteProcess
+        twist_relay = ExecuteProcess(
+            cmd=['/usr/bin/python3',
+                 os.path.join(package_dir, 'scripts', 'twist_stamped_relay.py')],
+            output='screen',
+        )
+
     waiting_nodes = WaitForControllerConnection(
         target_driver=my_robot_driver,
         nodes_to_start=ros_control_spawners
@@ -145,6 +158,7 @@ def generate_launch_description():
         footprint_publisher,
         my_robot_driver,
         waiting_nodes,
+        *([twist_relay] if twist_relay else []),
         launch.actions.RegisterEventHandler(
             event_handler=launch.event_handlers.OnProcessExit(
                 target_action=webots,
