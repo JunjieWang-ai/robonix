@@ -202,7 +202,9 @@ service:
     url: https://github.com/JunjieWang-ai/service-navigation-rbnx
     branch: feat/ros2-jazzy-noble
     config:
-      params_file: config/nav2_params.yaml
+      # Jazzy needs `::` plugin names (Humble only resolves `pkg/Class`), so
+      # this deployment keeps its own params file next to the shared Humble one.
+      params_file: config/nav2_params.jazzy.yaml
       bt_xml_file: config/navigate_to_pose.xml
       use_sim_time: true
       action_wait_s: 240.0
@@ -222,7 +224,7 @@ service:
         odom: tiago_chassis
         scan: tiago_lidar
         # Head depth camera: obstacles above the lidar's plane, such as
-        # table tops (__ROBONIX_DEPTH_CLOUD_TOPIC__ in config/nav2_params.yaml).
+        # table tops (__ROBONIX_DEPTH_CLOUD_TOPIC__ in config/nav2_params.jazzy.yaml).
         depth: tiago_camera
 
 # after booted all the services, register the skills (but don't activate them now)
