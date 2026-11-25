@@ -125,8 +125,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # uninstall pip 24.0, RECORD file not found") — and 24.0 is past that
 # resolver bug anyway.
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    without-proxy sh -c 'python3 -c "import sys; raise SystemExit(0 if sys.version_info < (3, 12) else 1)" \
-        && python3 -m pip install --upgrade pip'
+    without-proxy sh -c 'if python3 -c "import sys; raise SystemExit(0 if sys.version_info < (3, 12) else 1)"; then \
+        python3 -m pip install --upgrade pip; \
+    fi'
 
 # torch + torchvision — sm_120 (Blackwell / RTX 5090) requires
 # torch 2.7+ with CUDA 12.8 kernels. cu124 wheels only cover up to
