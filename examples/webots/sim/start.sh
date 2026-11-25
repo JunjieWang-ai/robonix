@@ -65,6 +65,11 @@ source "$REPO_ROOT/scripts/docker_base_image.sh"
 source "$SCRIPT_DIR/nvidia_host.sh"
 export ROBONIX_SIM_ROS_BASE_IMAGE="${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:humble-desktop-full}"
 robonix_ensure_local_base_image "$ROBONIX_SIM_ROS_BASE_IMAGE" "osrf/ros:humble-desktop-full"
+# A Jazzy base selects the Jazzy bridge Dockerfile (apt names / Webots .deb /
+# no tf2 ros2-testing hack differ from Humble). Humble keeps the default file.
+case "$ROBONIX_SIM_ROS_BASE_IMAGE" in
+  *jazzy*) export ROBONIX_SIM_BRIDGE_DOCKERFILE="${ROBONIX_SIM_BRIDGE_DOCKERFILE:-bridge/Dockerfile.jazzy}" ;;
+esac
 cd "$SCRIPT_DIR"
 
 # Webots world / robot launch args.

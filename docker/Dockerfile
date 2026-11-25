@@ -34,13 +34,16 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y cuda-toolkit-12-4 && \
     rm cuda-keyring_1.1-1_all.deb
 
+# Pilot searches saved capability output with rg; grep is the fallback.
+RUN apt-get update && apt-get install -y ripgrep
+
 # RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
 #     bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda3 && \
 #     rm Miniconda3-latest-Linux-x86_64.sh
 
 RUN apt update && apt install -y \
-    ros-jazzy-rmw-fastrtps-cpp \
-    ros-jazzy-rmw-zenoh-cpp \
+    ros-humble-rmw-fastrtps-cpp \
+    ros-humble-rmw-zenoh-cpp \
     python3-pip \
     python3-grpcio \
     python3-protobuf \
@@ -51,6 +54,7 @@ RUN apt update && apt install -y \
     wget \
     protobuf-compiler \
     libeigen3-dev \
+    libgl1-mesa-glx \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -64,13 +68,8 @@ RUN apt update && apt install -y \
     libclang-dev python3-vcstool \
     bash-completion \
     fonts-lmodern \
-    ros-jazzy-test-msgs \
+    ros-humble-test-msgs \
     python-is-python3
-
-# noble (24.04) marks the system Python as externally managed (PEP 668);
-# humble's 22.04 did not. Without this the bare pip3 installs below fail
-# with "externally-managed-environment". (Same ENV as the webots sim image.)
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 RUN pip3 install --no-cache-dir \
     grpcio-tools openai pyarrow "eclipse-zenoh>=1.2,<2" \

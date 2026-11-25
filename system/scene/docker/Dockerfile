@@ -13,10 +13,9 @@
 # release. Pick it with the `ROS_DISTRO` build arg (default `humble`); the
 # base image, the `ros-<distro>-*` apt packages, and the runtime
 # `source /opt/ros/<distro>/setup.bash` all follow it. Supported distros
-# (tf2 + rmw-zenoh available in the index): humble (zenoh-bridge-dds also
-# available), jazzy (noble index has no zenoh-bridge-dds — the vendor +
-# security-tools pair from the same zenoh release replaces it). Set it with
-# `ROBONIX_SCENE_ROS_DISTRO=jazzy rbnx build -p system/scene` (build.sh wires
+# (have the tf2 + zenoh-bridge packages scene needs): humble (default,
+# verified), iron, jazzy, rolling. Set it with
+# `ROBONIX_SCENE_ROS_DISTRO=iron rbnx build -p system/scene` (build.sh wires
 # the env var to this build arg) — see the scene README "ROS distro" section.
 #
 # Layout inside the image:
@@ -36,11 +35,6 @@
 ARG ROS_DISTRO=humble
 ARG ROS_BASE_IMAGE=robonix-ros:humble-ros-base
 FROM ${ROS_BASE_IMAGE}
-
-# noble (24.04) marks the system Python as externally managed (PEP 668);
-# humble's 22.04 did not. Without this the bare pip installs below fail
-# with "externally-managed-environment". (Same ENV as the webots sim image.)
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # ── Build-time proxy helpers ──────────────────────────────────────
 # Usage:
@@ -105,27 +99,23 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         apt-get update && \
         apt-get install -y --no-install-recommends \
             python3-pip \
-            ros-$ROS_DISTRO-cv-bridge \
+            python3-cv-bridge \
             python3-numpy \
             ros-$ROS_DISTRO-tf2-ros \
             ros-$ROS_DISTRO-tf-transformations \
             ros-$ROS_DISTRO-rmw-cyclonedds-cpp \
             ros-$ROS_DISTRO-rmw-zenoh-cpp \
-            $( [ "$ROS_DISTRO" = humble ] && echo "ros-$ROS_DISTRO-zenoh-bridge-dds" \
-                                         || echo "ros-$ROS_DISTRO-zenoh-cpp-vendor ros-$ROS_DISTRO-zenoh-security-tools" ) && \
+            ros-$ROS_DISTRO-zenoh-bridge-dds && \
         rm -rf /var/lib/apt/lists/* \
     '
 
 # pip: do NOT use proxy.
-# Upgrade pip ONLY on the jammy/python3.10 era: pip 22.0.2's resolver hits
-# the get_topological_weights AssertionError on the sets below. On noble
-# (python3.12, pip 24.0) the upgrade is a guaranteed build failure — pip
-# cannot uninstall the Debian-owned apt pip (no RECORD file: "Cannot
-# uninstall pip 24.0, RECORD file not found") — and 24.0 is past that
-# resolver bug anyway.
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
-    without-proxy sh -c 'python3 -c "import sys; raise SystemExit(0 if sys.version_info < (3, 12) else 1)" \
-        && python3 -m pip install --upgrade pip'
+    without-proxy python3 -m pip install \
+        --progress-bar on \
+        --timeout 60 \
+        --retries 3 \
+        --upgrade pip
 
 # torch + torchvision — sm_120 (Blackwell / RTX 5090) requires
 # torch 2.7+ with CUDA 12.8 kernels. cu124 wheels only cover up to
@@ -145,14 +135,13 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # the slow fallback below after wasting the full aliyun download.
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     without-proxy sh -c 'set -eu; \
-        PYTAG="cp$(python3 --version 2>&1 | sed "s/Python \([0-9]*\)\.\([0-9]*\).*/\1\2/")"; \
         base="https://mirrors.aliyun.com/pytorch-wheels/cu128"; \
-        tw="torch-2.7.1+cu128-${PYTAG}-${PYTAG}-manylinux_2_28_x86_64.whl"; \
-        tvw="torchvision-0.22.1+cu128-${PYTAG}-${PYTAG}-manylinux_2_28_x86_64.whl"; \
+        tw="torch-2.7.1+cu128-cp310-cp310-manylinux_2_28_x86_64.whl"; \
+        tvw="torchvision-0.22.1+cu128-cp310-cp310-manylinux_2_28_x86_64.whl"; \
         curl -fSL --retry 5 --retry-delay 2 -C - -o "/tmp/$tw" \
-             "$base/torch-2.7.1%2Bcu128-${PYTAG}-${PYTAG}-manylinux_2_28_x86_64.whl"; \
+             "$base/torch-2.7.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl"; \
         curl -fSL --retry 5 --retry-delay 2 -C - -o "/tmp/$tvw" \
-             "$base/torchvision-0.22.1%2Bcu128-${PYTAG}-${PYTAG}-manylinux_2_28_x86_64.whl"; \
+             "$base/torchvision-0.22.1%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl"; \
         python3 -m pip install --progress-bar on --timeout 60 --retries 3 \
              "/tmp/$tw" "/tmp/$tvw"; \
         rm -f "/tmp/$tw" "/tmp/$tvw"' \
@@ -168,16 +157,8 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 
 # base
 COPY requirements/scene-base.txt /tmp/requirements/scene-base.txt
-# "numpy<2": noble's apt python3-numpy (1.26.4) is Debian-owned (no RECORD) —
-# pip cannot uninstall it while upgrading to 2.x, and numpy 2.x would break
-# the image's ROS apt packages anyway (built against the numpy 1.26 ABI; see
-# the rerun note in scene-viewer.txt). With the cap, the installed 1.26.4
-# satisfies scipy and pip skips numpy entirely. Do NOT blanket
-# --ignore-installed: the later layers rely on the torch version installed
-# here, and ignoring it would re-resolve torch from PyPI.
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     without-proxy pip install -r /tmp/requirements/scene-base.txt \
-        "numpy<2" \
         --progress-bar on \
         --timeout 60 \
         --retries 3 \
@@ -185,11 +166,8 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 
 # core
 COPY requirements/scene-perception-core.txt /tmp/requirements/scene-perception-core.txt
-# "numpy<2" here too: keeps the resolver away from opencv versions that
-# require numpy>=2 (same ABI argument as the base layer).
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     without-proxy pip install -r /tmp/requirements/scene-perception-core.txt \
-        "numpy<2" \
         --progress-bar on \
         --timeout 60 \
         --retries 3 \
@@ -197,14 +175,8 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 
 # network heavy
 COPY requirements/scene-perception-heavy.txt /tmp/requirements/scene-perception-heavy.txt
-# "numpy<2": same ABI argument as base/core. --ignore-installed psutil:
-# open3d's dash/matplotlib dep tree upgrades psutil, but apt-side psutil
-# (pulled in by ros2cli) is Debian-owned with no RECORD — pip cannot
-# uninstall it. The pip psutil lands in /usr/local and shadows it.
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     without-proxy pip install -r /tmp/requirements/scene-perception-heavy.txt \
-        "numpy<2" \
-        --ignore-installed psutil \
         --progress-bar on \
         --timeout 60 \
         --retries 3 \
@@ -217,12 +189,6 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
 # rejects them at import ("gencode 7.35.1 runtime 6.33.6"). The floor is here
 # because the base ROS image ships something older still.
 RUN without-proxy pip install --upgrade "protobuf==6.33.6"
-
-# Restore the setuptools pin scene-base deliberately sets (69.5.1): open3d's
-# dash/matplotlib dep tree upgrades setuptools past what colcon-core accepts
-# (<80), and this image runs colcon for its ROS 2 IDL overlay at runtime
-# (scripts/build.sh's ros2_idl step). Heavy layer runs above; restore below it.
-RUN without-proxy pip install --no-cache-dir "setuptools==69.5.1"
 
 # pytorch3d (see requirements/scene-pytorch3d.txt to decide whether installing it or not.)
 # COPY requirements/scene-pytorch3d.txt /tmp/requirements/scene-pytorch3d.txt
@@ -271,6 +237,7 @@ RUN mkdir -p /opt/models /opt/models/hf /opt/models/ultralytics /opt/ultralytics
 COPY _weights/yolov8l-world.pt /opt/models/yolov8l-world.pt
 COPY _weights/mobile_sam.pt    /opt/models/mobile_sam.pt
 COPY _weights/open_clip_pytorch_model.bin /opt/models/open_clip_pytorch_model.bin
+COPY _build/full-models/ /opt/models/full/
 
 # Two CLIP-flavored downloads bake in here:
 #   1. open_clip's ViT-B-32 LAION-2B — copied above from the host model cache.
@@ -335,13 +302,7 @@ EOF
 
 # No global proxy ENV was set, so there is no build-time proxy to clear here.
 
-# Fixed env so perception_concept_graphs.py knows where the weights
-# live without each deployment having to override.
-ENV SCENE_YOLO_WORLD_WEIGHTS=/opt/models/yolov8l-world.pt \
-    SCENE_MOBILE_SAM_WEIGHTS=/opt/models/mobile_sam.pt \
-    YOLO_CONFIG_DIR=/opt/ultralytics \
-    SCENE_CLIP_MODEL=ViT-B-32 \
-    SCENE_CLIP_PRETRAINED=/opt/models/open_clip_pytorch_model.bin
+ENV YOLO_CONFIG_DIR=/opt/ultralytics
 
 # viewer (see the file for why this one is --no-deps). Last, so bumping it
 # reuses every heavy layer above.
@@ -361,6 +322,16 @@ RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
         | tar xz -C /opt/rerun-web-viewer --strip-components=1 \
             package/index.js package/re_viewer.js package/re_viewer_bg.wasm \
     && rm /tmp/requirements/scene-viewer.txt
+
+ARG SCENE_CG_INFERENCE=torch
+COPY requirements/scene-perception-engines.txt /tmp/requirements/scene-perception-engines.txt
+COPY requirements/scene-perception-export.txt /tmp/requirements/scene-perception-export.txt
+RUN if [ "$SCENE_CG_INFERENCE" = tensorrt ]; then \
+        without-proxy python3 -m pip install \
+            -r /tmp/requirements/scene-perception-engines.txt \
+            -r /tmp/requirements/scene-perception-export.txt \
+            'tensorrt-cu12>=10,<11'; \
+    fi
 
 WORKDIR /scene
 

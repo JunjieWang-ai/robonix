@@ -334,9 +334,12 @@ if ! command -v docker >/dev/null 2>&1; then
     echo "[build] error: target $TARGET needs docker on PATH" >&2
     exit 1
 fi
-# jetson-docker uses the L4T-based Dockerfile; x86-docker the default one.
+# jetson-docker uses the L4T-based Dockerfile; a Jazzy build uses the
+# distro-specific one (zenoh package split, PEP 668 pip handling); x86-docker
+# with the default Humble distro uses the shared upstream Dockerfile.
 SCENE_DOCKERFILE="docker/Dockerfile"
 [[ "$TARGET" == "jetson-docker" ]] && SCENE_DOCKERFILE="docker/Dockerfile.jetson"
+[[ "${ROS_DISTRO_BUILD}" == "jazzy" ]] && SCENE_DOCKERFILE="docker/Dockerfile.jazzy"
 
 DOCKER_BUILD_FLAGS=(
     --network=host

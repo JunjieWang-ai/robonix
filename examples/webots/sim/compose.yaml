@@ -20,7 +20,9 @@ services:
     container_name: ${ROBONIX_SIM_CONTAINER:-robonix_tiago_sim}
     build:
       context: ./
-      dockerfile: bridge/Dockerfile
+      # Humble build by default; a Jazzy sim sets
+      # ROBONIX_SIM_BRIDGE_DOCKERFILE=bridge/Dockerfile.jazzy (see start.sh).
+      dockerfile: ${ROBONIX_SIM_BRIDGE_DOCKERFILE:-bridge/Dockerfile}
       args:
         ROS_BASE_IMAGE: "${ROBONIX_SIM_ROS_BASE_IMAGE:-robonix-osrf-ros:humble-desktop-full}"
     # Network namespace — overridable via ROBONIX_SIM_NETWORK so a CI / parallel
